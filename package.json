@@ -27,10 +27,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "server": "node server.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
     "build": "react-scripts build",
-    "build-and-serve": "npm run build && npm run server"
   },
   "eslintConfig": {
     "extends": [
