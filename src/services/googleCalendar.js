@@ -30,7 +30,7 @@ export const loadGoogleCalendarEvents = async () => {
 
     try {
         // Use your ngrok URL here (replace with your actual ngrok URL)
-        const response = await fetch('https://f1e4-109-245-33-164.ngrok-free.app/api/calendar-events', {
+        const response = await fetch('https://calendar-lac-six.vercel.app/api/calendar-events', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
