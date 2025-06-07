@@ -1,6 +1,6 @@
-// src/pages/CalendarPage.js - Service Account Version
+// src/pages/CalendarPage.js - Enhanced with URL Conflict Parameters
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import EventsList from '../components/EventList';
 import ConflictWarning from '../components/ConflictWarning';
 import { loadGoogleCalendarEvents } from '../services/googleCalendar';
@@ -12,6 +12,7 @@ function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [conflicts, setConflicts] = useState([]);
     const { date } = useParams();
+    const location = useLocation();
 
     useEffect(() => {
         // Parse date from URL
@@ -28,7 +29,7 @@ function CalendarPage() {
 
         // Load calendar data immediately
         loadCalendarData();
-    }, [date]);
+    }, [date, location]);
 
     const loadCalendarData = async () => {
         try {
@@ -37,8 +38,16 @@ function CalendarPage() {
             console.log('🚀 Loading calendar events...');
 
             const calendarEvents = await loadGoogleCalendarEvents();
-            setEvents(calendarEvents);
-            checkForConflicts(calendarEvents, selectedDate);
+
+            // Get conflict times from URL parameters
+            const urlParams = new URLSearchParams(location.search);
+            const conflictParam = urlParams.get('conflicts');
+            const conflictTimes = conflictParam ? decodeURIComponent(conflictParam).split(',') : [];
+
+            // Mark events as conflicts based on URL parameters
+            const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, selectedDate);
+            setEvents(eventsWithConflicts);
+            checkForConflicts(eventsWithConflicts, selectedDate, conflictTimes.length > 0);
 
             console.log('✅ Calendar events loaded successfully');
         } catch (err) {
@@ -49,13 +58,61 @@ function CalendarPage() {
         }
     };
 
-    const checkForConflicts = (events, targetDate) => {
+    // Mark events as conflicts based on the times from n8n
+    const markConflictEvents = (events, conflictTimes, targetDate) => {
+        if (conflictTimes.length === 0) return events;
+
+        return events.map(event => {
+            const eventDate = new Date(event.start);
+            if (eventDate.toDateString() !== targetDate.toDateString()) {
+                return event;
+            }
+
+            // Check if this event's time matches any conflict time
+            const eventTimeRange = formatEventTimeRange(event);
+            const hasConflict = conflictTimes.some(conflictTime =>
+                conflictTime.trim().includes(eventTimeRange) ||
+                eventTimeRange.includes(conflictTime.trim())
+            );
+
+            return {
+                ...event,
+                hasConflict: hasConflict
+            };
+        });
+    };
+
+    const formatEventTimeRange = (event) => {
+        const start = new Date(event.start);
+        const end = new Date(event.end);
+        const startTime = start.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        const endTime = end.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        return `${startTime} - ${endTime}`;
+    };
+
+    const checkForConflicts = (events, targetDate, hasUrlConflicts) => {
         const dateEvents = events.filter(event => {
             const eventDate = new Date(event.start);
             return eventDate.toDateString() === targetDate.toDateString();
         });
 
-        if (dateEvents.length >= 3) {
+        const conflictingEvents = dateEvents.filter(event => event.hasConflict);
+
+        if (hasUrlConflicts && conflictingEvents.length > 0) {
+            setConflicts([{
+                message: `⚠️ Schedule conflicts detected from your assistant for ${targetDate.toDateString()}`,
+                events: conflictingEvents,
+                isFromAssistant: true
+            }]);
+        } else if (dateEvents.length >= 3) {
             setConflicts([{
                 message: `Busy schedule detected for ${targetDate.toDateString()}`,
                 events: dateEvents
