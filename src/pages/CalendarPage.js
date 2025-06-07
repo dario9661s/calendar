@@ -42,7 +42,10 @@ function CalendarPage() {
             // Get conflict times from URL parameters
             const urlParams = new URLSearchParams(location.search);
             const conflictParam = urlParams.get('conflicts');
-            const conflictTimes = conflictParam ? decodeURIComponent(conflictParam).split(',') : [];
+            const conflictTimes = conflictParam ? decodeURIComponent(conflictParam).split('|') : [];
+
+            console.log('URL conflict parameter:', conflictParam);
+            console.log('Parsed conflict times:', conflictTimes);
 
             // Mark events as conflicts based on URL parameters
             const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, selectedDate);
@@ -62,6 +65,9 @@ function CalendarPage() {
     const markConflictEvents = (events, conflictTimes, targetDate) => {
         if (conflictTimes.length === 0) return events;
 
+        console.log('Marking conflicts for date:', targetDate);
+        console.log('Conflict times to match:', conflictTimes);
+
         return events.map(event => {
             const eventDate = new Date(event.start);
             if (eventDate.toDateString() !== targetDate.toDateString()) {
@@ -70,16 +76,40 @@ function CalendarPage() {
 
             // Check if this event's time matches any conflict time
             const eventTimeRange = formatEventTimeRange(event);
-            const hasConflict = conflictTimes.some(conflictTime =>
-                conflictTime.trim().includes(eventTimeRange) ||
-                eventTimeRange.includes(conflictTime.trim())
-            );
+            console.log('Checking event:', eventTimeRange);
+
+            const hasConflict = conflictTimes.some(conflictTime => {
+                const cleanConflictTime = conflictTime.trim();
+                const isMatch = cleanConflictTime.includes(eventTimeRange) ||
+                    eventTimeRange.includes(cleanConflictTime) ||
+                    timeRangesMatch(eventTimeRange, cleanConflictTime);
+
+                if (isMatch) {
+                    console.log('CONFLICT FOUND:', eventTimeRange, 'matches', cleanConflictTime);
+                }
+                return isMatch;
+            });
 
             return {
                 ...event,
                 hasConflict: hasConflict
             };
         });
+    };
+
+    // Helper function to match time ranges more flexibly
+    const timeRangesMatch = (eventTime, conflictTime) => {
+        // Extract start and end times from both ranges
+        const eventMatch = eventTime.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/g);
+        const conflictMatch = conflictTime.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/g);
+
+        if (!eventMatch || !conflictMatch || eventMatch.length < 2 || conflictMatch.length < 2) {
+            return false;
+        }
+
+        // Compare start and end times
+        return (eventMatch[0].replace(/\s/g, '') === conflictMatch[0].replace(/\s/g, '') &&
+            eventMatch[1].replace(/\s/g, '') === conflictMatch[1].replace(/\s/g, ''));
     };
 
     const formatEventTimeRange = (event) => {
