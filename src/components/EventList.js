@@ -33,23 +33,37 @@ function EventsList({ events, date }) {
         );
     }
 
+    const conflictCount = events.filter(event => event.hasConflict).length;
+
     return (
         <div className="events-list">
             <h3>{getDayEmoji(date)} {formatDate(date)}</h3>
             <div className="events-count">
                 <span>{events.length} event{events.length !== 1 ? 's' : ''}</span>
+                {conflictCount > 0 && (
+                    <span className="conflict-badge">
+                        🔴 {conflictCount} conflict{conflictCount !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
             <div className="events">
                 {events.map((event, index) => (
-                    <div key={event.id || index} className="event-item">
+                    <div
+                        key={event.id || index}
+                        className={`event-item ${event.hasConflict ? 'conflict-event' : ''}`}
+                    >
                         <div className="event-time">
+                            {event.hasConflict && <span className="conflict-indicator">🔴</span>}
                             {formatTime(event.start)} - {formatTime(event.end)}
                         </div>
-                        <div className="event-title">{event.title}</div>
+                        <div className="event-title">
+                            {event.title}
+                            {event.hasConflict && <span className="conflict-text"> (CONFLICT)</span>}
+                        </div>
                         {event.description && (
                             <div className="event-description">{event.description}</div>
                         )}
-                        <div className="event-indicator"></div>
+                        <div className={`event-indicator ${event.hasConflict ? 'conflict-indicator-line' : ''}`}></div>
                     </div>
                 ))}
             </div>

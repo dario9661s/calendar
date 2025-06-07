@@ -18,13 +18,25 @@ function CalendarPage() {
         // Parse date from URL
         if (date) {
             try {
-                const urlDate = new Date(date);
+                // Parse the date correctly from YYYY-MM-DD format
+                const urlDate = new Date(date + 'T00:00:00'); // Add time to avoid timezone issues
+                console.log('URL date parameter:', date);
+                console.log('Parsed URL date:', urlDate);
+                console.log('Parsed date string:', urlDate.toDateString());
+
                 if (!isNaN(urlDate.getTime())) {
                     setSelectedDate(urlDate);
+                } else {
+                    console.error('Invalid date parsed from URL:', date);
+                    setSelectedDate(new Date()); // fallback to today
                 }
             } catch (error) {
-                console.error('Invalid date parameter:', date);
+                console.error('Error parsing date parameter:', date, error);
+                setSelectedDate(new Date()); // fallback to today
             }
+        } else {
+            console.log('No date parameter, using current date');
+            setSelectedDate(new Date());
         }
 
         // Load calendar data immediately
