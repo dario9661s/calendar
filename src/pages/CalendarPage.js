@@ -59,10 +59,21 @@ function CalendarPage() {
             console.log('URL conflict parameter:', conflictParam);
             console.log('Parsed conflict times:', conflictTimes);
 
-            // Mark events as conflicts based on URL parameters
-            const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, selectedDate);
+            // Get the actual target date from URL, not from state
+            let targetDate = new Date(); // default
+            if (date) {
+                try {
+                    targetDate = new Date(date + 'T00:00:00');
+                    console.log('Using target date from URL:', targetDate);
+                } catch (error) {
+                    console.error('Error parsing date from URL:', error);
+                }
+            }
+
+            // Mark events as conflicts based on URL parameters - USE targetDate not selectedDate
+            const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, targetDate);
             setEvents(eventsWithConflicts);
-            checkForConflicts(eventsWithConflicts, selectedDate, conflictTimes.length > 0);
+            checkForConflicts(eventsWithConflicts, targetDate, conflictTimes.length > 0);
 
             console.log('✅ Calendar events loaded successfully');
         } catch (err) {
