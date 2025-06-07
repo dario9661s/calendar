@@ -115,17 +115,32 @@ function CalendarPage() {
     };
 
     // Mark events as conflicts based on the times from n8n
+    // Mark events as conflicts based on the times from n8n
     const markConflictEvents = (events, conflictTimes, targetDate) => {
         if (conflictTimes.length === 0) return events;
 
-        console.log('Marking conflicts for date:', targetDate);
+        console.log('=== CONFLICT MATCHING DEBUG ===');
+        console.log('Target date:', targetDate);
+        console.log('Target date string:', targetDate.toDateString());
         console.log('Conflict times to match:', conflictTimes);
+        console.log('Total events to check:', events.length);
 
         // Parse all conflict time ranges
         const parsedConflicts = conflictTimes.map(parseConflictTime).filter(Boolean);
         console.log('Parsed conflicts:', parsedConflicts);
 
-        return events.map(event => {
+        // Filter events for the target date first
+        const eventsForDate = events.filter(event => {
+            const eventDate = new Date(event.start);
+            const eventDateString = eventDate.toDateString();
+            const isMatch = eventDateString === targetDate.toDateString();
+            console.log(`Event: ${event.title} | Event date: ${eventDateString} | Target: ${targetDate.toDateString()} | Match: ${isMatch}`);
+            return isMatch;
+        });
+
+        console.log(`Found ${eventsForDate.length} events for target date`);
+
+        const result = events.map(event => {
             const eventDate = new Date(event.start);
             if (eventDate.toDateString() !== targetDate.toDateString()) {
                 return event;
@@ -146,7 +161,8 @@ function CalendarPage() {
                 hour12: false
             });
 
-            console.log(`Checking event: ${eventStart24} - ${eventEnd24} (${event.title})`);
+            console.log(`\n--- CHECKING EVENT: ${event.title} ---`);
+            console.log(`Event time: ${eventStart24} - ${eventEnd24}`);
 
             // Check if this event matches any conflict time
             const hasConflict = parsedConflicts.some(conflict => {
@@ -155,13 +171,17 @@ function CalendarPage() {
                 const isMatch = startMatch && endMatch;
 
                 console.log(`  Comparing with conflict: ${conflict.start24} - ${conflict.end24}`);
-                console.log(`  Start match: ${startMatch}, End match: ${endMatch}, Overall: ${isMatch}`);
+                console.log(`  Start match: ${eventStart24} === ${conflict.start24} = ${startMatch}`);
+                console.log(`  End match: ${eventEnd24} === ${conflict.end24} = ${endMatch}`);
+                console.log(`  Overall match: ${isMatch}`);
 
                 return isMatch;
             });
 
             if (hasConflict) {
-                console.log(`✅ CONFLICT FOUND for: ${event.title}`);
+                console.log(`🔴 CONFLICT FOUND for: ${event.title}`);
+            } else {
+                console.log(`✅ No conflict for: ${event.title}`);
             }
 
             return {
@@ -169,6 +189,16 @@ function CalendarPage() {
                 hasConflict: hasConflict
             };
         });
+
+        const conflictEvents = result.filter(event => event.hasConflict);
+        console.log(`\n=== FINAL RESULT ===`);
+        console.log(`Total events with conflicts: ${conflictEvents.length}`);
+        conflictEvents.forEach(event => {
+            console.log(`- ${event.title} (${event.start})`);
+        });
+        console.log('=== END DEBUG ===\n');
+
+        return result;
     };
     // Helper function to match time ranges more flexibly
 
