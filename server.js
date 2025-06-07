@@ -105,7 +105,7 @@ app.get('/api/calendar-events', async (req, res) => {
 
         // Fetch events from your specific calendar (replace with your email)
         const response = await calendar.events.list({
-            calendarId: 'your-actual-email@shopibro.com', // Replace with YOUR email address
+            calendarId: 'dariol@shopibro.com', // Replace with YOUR email address
             timeMin: timeMin.toISOString(),
             timeMax: timeMax.toISOString(),
             singleEvents: true,
