@@ -42,7 +42,7 @@ function EventsList({ events, date }) {
                 <span>{events.length} event{events.length !== 1 ? 's' : ''}</span>
                 {conflictCount > 0 && (
                     <span className="conflict-badge">
-                        🔴 {conflictCount} conflict{conflictCount !== 1 ? 's' : ''}
+                        ⚡ {conflictCount} conflict{conflictCount !== 1 ? 's' : ''} detected
                     </span>
                 )}
             </div>
@@ -53,12 +53,14 @@ function EventsList({ events, date }) {
                         className={`event-item ${event.hasConflict ? 'conflict-event' : ''}`}
                     >
                         <div className="event-time">
-                            {event.hasConflict && <span className="conflict-indicator">🔴</span>}
+                            {event.hasConflict && <span className="conflict-indicator-icon">⚡</span>}
                             {formatTime(event.start)} - {formatTime(event.end)}
                         </div>
                         <div className="event-title">
                             {event.title}
-                            {event.hasConflict && <span className="conflict-text"> (CONFLICT)</span>}
+                            {event.hasConflict && (
+                                <span className="conflict-text">SCHEDULING CONFLICT</span>
+                            )}
                         </div>
                         {event.description && (
                             <div className="event-description">{event.description}</div>

@@ -244,6 +244,73 @@ body {
   margin-bottom: 20px;
   box-shadow: 0 2px 12px rgba(240, 198, 116, 0.2);
 }
+.conflict-event {
+  background: linear-gradient(135deg, #fef3c7, #fed7aa) !important;
+  border-left: 5px solid #f59e0b !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important;
+  animation: conflictPulse 3s ease-in-out infinite;
+}
+
+.conflict-event .event-time {
+  color: #92400e !important;
+  font-weight: 600 !important;
+}
+
+.conflict-event .event-title {
+  color: #78350f !important;
+  font-weight: 600 !important;
+}
+
+.conflict-event .event-description {
+  color: #a16207 !important;
+}
+
+.conflict-indicator-icon {
+  color: #f59e0b;
+  margin-right: 6px;
+  font-size: 0.9em;
+}
+
+.conflict-text {
+  color: #f59e0b;
+  fontSize: 0.85em;
+  font-weight: 700;
+  margin-left: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.conflict-badge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+  margin-left: 8px;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.conflict-indicator-line {
+  background-color: #f59e0b !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+/* Conflict Animation */
+@keyframes conflictPulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.25);
+    transform: translateY(-1px);
+  }
+}
 
 .conflict-header {
   display: flex;

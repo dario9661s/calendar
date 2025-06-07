@@ -1,8 +1,7 @@
-// src/pages/CalendarPage.js - Enhanced with URL Conflict Parameters
+// src/pages/CalendarPage.js - Clean UX without warning box
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import EventsList from '../components/EventList';
-import ConflictWarning from '../components/ConflictWarning';
 import { loadGoogleCalendarEvents } from '../services/googleCalendar';
 
 function CalendarPage() {
@@ -10,7 +9,6 @@ function CalendarPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [conflicts, setConflicts] = useState([]);
     const { date } = useParams();
     const location = useLocation();
 
@@ -73,7 +71,6 @@ function CalendarPage() {
             // Mark events as conflicts based on URL parameters - USE targetDate not selectedDate
             const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, targetDate);
             setEvents(eventsWithConflicts);
-            checkForConflicts(eventsWithConflicts, targetDate, conflictTimes.length > 0);
 
             console.log('✅ Calendar events loaded successfully');
         } catch (err) {
@@ -84,7 +81,6 @@ function CalendarPage() {
         }
     };
 
-    // Mark events as conflicts based on the times from n8n
     // Convert 12-hour time to 24-hour time for comparison
     const convertTo24Hour = (time12h) => {
         const [time, modifier] = time12h.split(/\s*(AM|PM)/i);
@@ -101,23 +97,6 @@ function CalendarPage() {
         minutes = minutes ? minutes.padStart(2, '0') : '00';
 
         return `${hours}:${minutes}`;
-    };
-
-    // Convert 24-hour time to 12-hour time for comparison
-    const convertTo12Hour = (time24h) => {
-        const [hours, minutes] = time24h.split(':');
-        const hour24 = parseInt(hours, 10);
-        const minute = minutes || '00';
-
-        if (hour24 === 0) {
-            return `12:${minute} AM`;
-        } else if (hour24 < 12) {
-            return `${hour24}:${minute} AM`;
-        } else if (hour24 === 12) {
-            return `12:${minute} PM`;
-        } else {
-            return `${hour24 - 12}:${minute} PM`;
-        }
     };
 
     // Extract time range from conflict string
@@ -138,7 +117,6 @@ function CalendarPage() {
     };
 
     // Mark events as conflicts based on the times from n8n
-    // Mark events as conflicts based on the times from n8n
     const markConflictEvents = (events, conflictTimes, targetDate) => {
         if (conflictTimes.length === 0) return events;
 
@@ -151,17 +129,6 @@ function CalendarPage() {
         // Parse all conflict time ranges
         const parsedConflicts = conflictTimes.map(parseConflictTime).filter(Boolean);
         console.log('Parsed conflicts:', parsedConflicts);
-
-        // Filter events for the target date first
-        const eventsForDate = events.filter(event => {
-            const eventDate = new Date(event.start);
-            const eventDateString = eventDate.toDateString();
-            const isMatch = eventDateString === targetDate.toDateString();
-            console.log(`Event: ${event.title} | Event date: ${eventDateString} | Target: ${targetDate.toDateString()} | Match: ${isMatch}`);
-            return isMatch;
-        });
-
-        console.log(`Found ${eventsForDate.length} events for target date`);
 
         const result = events.map(event => {
             const eventDate = new Date(event.start);
@@ -223,31 +190,6 @@ function CalendarPage() {
 
         return result;
     };
-    // Helper function to match time ranges more flexibly
-
-    const checkForConflicts = (events, targetDate, hasUrlConflicts) => {
-        const dateEvents = events.filter(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.toDateString() === targetDate.toDateString();
-        });
-
-        const conflictingEvents = dateEvents.filter(event => event.hasConflict);
-
-        if (hasUrlConflicts && conflictingEvents.length > 0) {
-            setConflicts([{
-                message: `⚠️ Schedule conflicts detected from your assistant for ${targetDate.toDateString()}`,
-                events: conflictingEvents,
-                isFromAssistant: true
-            }]);
-        } else if (dateEvents.length >= 3) {
-            setConflicts([{
-                message: `Busy schedule detected for ${targetDate.toDateString()}`,
-                events: dateEvents
-            }]);
-        } else {
-            setConflicts([]);
-        }
-    };
 
     const getEventsForDate = (date) => {
         return events.filter(event => {
@@ -295,10 +237,6 @@ function CalendarPage() {
                 <h1>📅 Schedule Overview</h1>
                 <p>Events for the selected day</p>
             </div>
-
-            {conflicts.length > 0 && (
-                <ConflictWarning conflicts={conflicts} />
-            )}
 
             <EventsList
                 events={getEventsForDate(selectedDate)}
