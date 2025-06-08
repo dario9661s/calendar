@@ -305,6 +305,84 @@ body {
   background-color: #f59e0b !important;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
 }
+/* ======= TIMELINE STYLES ======= */
+.timeline-container {
+  margin-top: 16px;
+}
+
+.timeline-slot {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  min-height: 60px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  padding-bottom: 8px;
+}
+
+.time-label {
+  width: 80px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tg-hint-color);
+  text-align: right;
+  padding-right: 16px;
+  padding-top: 4px;
+  line-height: 1.2;
+}
+
+.slot-content {
+  flex: 1;
+  min-height: 50px;
+}
+
+.free-time-slot {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border: 1px dashed #86efac;
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-align: center;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 2px 0;
+}
+
+.free-time-text {
+  font-size: 13px;
+  color: #166534;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Adjust existing event items for timeline */
+.timeline-container .event-item {
+  margin-bottom: 6px;
+  margin-top: 2px;
+}
+
+/* Timeline specific responsive styles */
+@media (max-width: 480px) {
+  .time-label {
+    width: 60px;
+    font-size: 11px;
+    padding-right: 12px;
+  }
+
+  .timeline-slot {
+    min-height: 50px;
+  }
+
+  .free-time-slot {
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+
+  .free-time-text {
+    font-size: 12px;
+  }
+}
 
 @keyframes conflictPulse {
   0%, 100% {

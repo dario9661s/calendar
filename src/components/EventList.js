@@ -2,10 +2,6 @@ import React from 'react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 
 function EventsList({ events, date }) {
-    const formatTime = (dateString) => {
-        return format(new Date(dateString), 'HH:mm');
-    };
-
     const formatDate = (date) => {
         if (isToday(date)) return 'Today';
         if (isTomorrow(date)) return 'Tomorrow';
@@ -20,6 +16,43 @@ function EventsList({ events, date }) {
         return '📅';
     };
 
+    // Generate time slots from 8 AM to 8 PM
+    const generateTimeSlots = () => {
+        const slots = [];
+        for (let hour = 8; hour <= 20; hour++) {
+            const time24 = `${hour.toString().padStart(2, '0')}:00`;
+            const time12 = format(new Date(`2000-01-01T${time24}`), 'h:mm a');
+            slots.push({
+                hour,
+                time24,
+                time12,
+                events: []
+            });
+        }
+        return slots;
+    };
+
+    // Place events in their corresponding time slots
+    const getTimelineData = () => {
+        const slots = generateTimeSlots();
+
+        events.forEach(event => {
+            const eventStart = new Date(event.start);
+            const eventHour = eventStart.getHours();
+
+            // Find the slot this event belongs to
+            const slot = slots.find(s => s.hour === eventHour);
+            if (slot) {
+                slot.events.push(event);
+            }
+        });
+
+        return slots;
+    };
+
+    const timelineData = getTimelineData();
+    const conflictCount = events.filter(event => event.hasConflict).length;
+
     if (events.length === 0) {
         return (
             <div className="events-list">
@@ -33,8 +66,6 @@ function EventsList({ events, date }) {
         );
     }
 
-    const conflictCount = events.filter(event => event.hasConflict).length;
-
     return (
         <div className="events-list">
             <h3>{getDayEmoji(date)} {formatDate(date)}</h3>
@@ -46,26 +77,42 @@ function EventsList({ events, date }) {
                     </span>
                 )}
             </div>
-            <div className="events">
-                {events.map((event, index) => (
-                    <div
-                        key={event.id || index}
-                        className={`event-item ${event.hasConflict ? 'conflict-event' : ''}`}
-                    >
-                        <div className="event-time">
-                            {event.hasConflict && <span className="conflict-indicator-icon">⚡</span>}
-                            {formatTime(event.start)} - {formatTime(event.end)}
+
+            <div className="timeline-container">
+                {timelineData.map((slot, index) => (
+                    <div key={slot.hour} className="timeline-slot">
+                        <div className="time-label">
+                            {slot.time12}
                         </div>
-                        <div className="event-title">
-                            {event.title}
-                            {event.hasConflict && (
-                                <span className="conflict-text">SCHEDULING CONFLICT</span>
+                        <div className="slot-content">
+                            {slot.events.length > 0 ? (
+                                slot.events.map((event, eventIndex) => (
+                                    <div
+                                        key={event.id || eventIndex}
+                                        className={`event-item ${event.hasConflict ? 'conflict-event' : ''}`}
+                                    >
+                                        <div className="event-time">
+                                            {event.hasConflict && <span className="conflict-indicator-icon">⚡</span>}
+                                            {format(new Date(event.start), 'h:mm a')} - {format(new Date(event.end), 'h:mm a')}
+                                        </div>
+                                        <div className="event-title">
+                                            {event.title}
+                                            {event.hasConflict && (
+                                                <span className="conflict-text">SCHEDULING CONFLICT</span>
+                                            )}
+                                        </div>
+                                        {event.description && (
+                                            <div className="event-description">{event.description}</div>
+                                        )}
+                                        <div className={`event-indicator ${event.hasConflict ? 'conflict-indicator-line' : ''}`}></div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="free-time-slot">
+                                    <span className="free-time-text">🕊️ Free time</span>
+                                </div>
                             )}
                         </div>
-                        {event.description && (
-                            <div className="event-description">{event.description}</div>
-                        )}
-                        <div className={`event-indicator ${event.hasConflict ? 'conflict-indicator-line' : ''}`}></div>
                     </div>
                 ))}
             </div>
