@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import CalendarPage from './pages/CalendarPage';
 import AuthCallback from './components/AuthCallback';
 import './App.css';
+import ContactPage from './pages/ContactPage'; // was ContactsPage
 
 function App() {
   useEffect(() => {
@@ -34,6 +35,8 @@ function App() {
             <Route path="/" element={<CalendarPage />} />
             <Route path="/:date" element={<CalendarPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/contact/:name" element={<ContactPage />} />
+
           </Routes>
         </div>
       </Router>
