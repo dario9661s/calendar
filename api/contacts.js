@@ -57,14 +57,15 @@ export default async function handler(req, res) {
             credentials: SERVICE_ACCOUNT_KEY,
             scopes: [
                 'https://www.googleapis.com/auth/contacts.readonly',
-                'https://www.googleapis.com/auth/contacts'
+                'https://www.googleapis.com/auth/contacts',
+                'https://www.googleapis.com/auth/userinfo.profile'
             ],
             // Domain-wide delegation - specify the user to impersonate
             subject: 'dario@shopibro.com'
         });
 
         console.log('👤 Impersonating user: dario@shopibro.com');
-        console.log('🔑 Requested scopes: contacts.readonly, contacts');
+        console.log('🔑 Requested scopes: contacts.readonly, contacts, userinfo.profile');
 
         // Get authenticated client
         console.log('🤝 Getting auth client...');
@@ -233,7 +234,8 @@ export default async function handler(req, res) {
                     impersonatingUser: 'dario@shopibro.com',
                     scopes: [
                         'https://www.googleapis.com/auth/contacts.readonly',
-                        'https://www.googleapis.com/auth/contacts'
+                        'https://www.googleapis.com/auth/contacts',
+                        'https://www.googleapis.com/auth/userinfo.profile'
                     ]
                 }
             });
