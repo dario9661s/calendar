@@ -1,4 +1,4 @@
-// api/contacts.js - Fixed version with body parsing
+// api/contacts.js - Debug version with comprehensive logging
 const { google } = require('googleapis');
 
 const SERVICE_ACCOUNT_KEY = {
@@ -16,6 +16,8 @@ const SERVICE_ACCOUNT_KEY = {
 };
 
 export default async function handler(req, res) {
+    console.log('🚀 === CONTACTS API DEBUG START ===');
+
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -30,7 +32,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        console.log('🔑 Getting service account auth for contacts...');
+        console.log('🔑 Setting up Google Auth...');
+        console.log('Service account client_email:', SERVICE_ACCOUNT_KEY.client_email);
+        console.log('Service account project_id:', SERVICE_ACCOUNT_KEY.project_id);
 
         // Parse body manually if needed
         let body = {};
@@ -40,39 +44,114 @@ export default async function handler(req, res) {
             } else if (req.body) {
                 body = req.body;
             } else {
-                // If req.body is undefined, try to parse from raw body
                 body = {};
             }
         }
 
-        console.log('Request body:', body);
+        console.log('📝 Request body:', body);
         const { name } = body;
 
         // Initialize Google Auth with People API scope
+        console.log('🔐 Creating GoogleAuth instance...');
         const auth = new google.auth.GoogleAuth({
             credentials: SERVICE_ACCOUNT_KEY,
             scopes: [
                 'https://www.googleapis.com/auth/contacts.readonly',
+                'https://www.googleapis.com/auth/contacts'
             ],
             // Domain-wide delegation - specify the user to impersonate
             subject: 'dario@shopibro.com'
         });
 
+        console.log('👤 Impersonating user: dario@shopibro.com');
+        console.log('🔑 Requested scopes: contacts.readonly, contacts');
+
         // Get authenticated client
+        console.log('🤝 Getting auth client...');
         const authClient = await auth.getClient();
+        console.log('✅ Auth client created successfully');
+
         const people = google.people({ version: 'v1', auth: authClient });
+        console.log('📞 People API instance created');
+
+        // Test basic API access first
+        console.log('🧪 === TESTING BASIC API ACCESS ===');
+        try {
+            console.log('🔍 Testing people.get for people/me...');
+            const meResponse = await people.people.get({
+                resourceName: 'people/me',
+                personFields: 'names,emailAddresses'
+            });
+            console.log('✅ people/me test successful:', {
+                name: meResponse.data.names?.[0]?.displayName,
+                email: meResponse.data.emailAddresses?.[0]?.value
+            });
+        } catch (meError) {
+            console.error('❌ people/me test failed:', meError.message);
+            console.error('Error status:', meError.code);
+            console.error('Error details:', meError.response?.data);
+
+            return res.status(500).json({
+                success: false,
+                error: 'Authentication failed',
+                details: meError.message,
+                errorCode: meError.code
+            });
+        }
+
+        console.log('🧪 === TESTING CONNECTIONS LIST ===');
+        try {
+            console.log('📋 Testing connections.list...');
+            const connectionsResponse = await people.people.connections.list({
+                resourceName: 'people/me',
+                personFields: 'names,emailAddresses,phoneNumbers',
+                pageSize: 5
+            });
+
+            const totalConnections = connectionsResponse.data.totalSize || 0;
+            const connections = connectionsResponse.data.connections || [];
+
+            console.log(`📊 Total connections: ${totalConnections}`);
+            console.log(`📋 Returned connections: ${connections.length}`);
+
+            connections.forEach((connection, index) => {
+                console.log(`Contact ${index + 1}:`, {
+                    name: connection.names?.[0]?.displayName,
+                    email: connection.emailAddresses?.[0]?.value
+                });
+            });
+
+            if (connections.length === 0) {
+                console.log('⚠️ No connections found - this might indicate permission issues');
+            }
+
+        } catch (connectionsError) {
+            console.error('❌ connections.list failed:', connectionsError.message);
+            console.error('Error status:', connectionsError.code);
+            console.error('Error details:', connectionsError.response?.data);
+
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to list connections',
+                details: connectionsError.message,
+                errorCode: connectionsError.code
+            });
+        }
 
         if (name) {
-            // Search for specific contact
-            console.log('👥 Searching for contact:', name);
+            console.log('🔍 === SEARCHING FOR SPECIFIC CONTACT ===');
+            console.log('Searching for:', name);
 
-            // First try direct search
+            // Try search API first
             try {
+                console.log('🔎 Trying searchContacts API...');
                 const searchResponse = await people.people.searchContacts({
                     query: name,
                     readMask: 'names,emailAddresses,phoneNumbers,organizations,photos',
                     pageSize: 10
                 });
+
+                console.log('Search response:', searchResponse.data);
 
                 if (searchResponse.data.results && searchResponse.data.results.length > 0) {
                     const person = searchResponse.data.results[0].person;
@@ -85,18 +164,20 @@ export default async function handler(req, res) {
                         photo: person.photos?.[0]?.url || ''
                     };
 
-                    console.log(`✅ Found contact: ${contact.name}`);
+                    console.log(`✅ Found contact via search: ${contact.name}`);
                     return res.status(200).json({
                         success: true,
-                        contact: contact
+                        contact: contact,
+                        method: 'searchContacts'
                     });
                 }
             } catch (searchError) {
-                console.log('Search API not available, falling back to list...');
+                console.log('⚠️ searchContacts not available, trying list method...');
+                console.log('Search error:', searchError.message);
             }
 
-            // If search didn't work, try listing all and filtering
-            console.log('📋 Falling back to list and filter...');
+            // Fall back to list and filter
+            console.log('📋 Trying list and filter method...');
 
             const response = await people.people.connections.list({
                 resourceName: 'people/me',
@@ -113,7 +194,7 @@ export default async function handler(req, res) {
                 photo: person.photos?.[0]?.url || ''
             })) || [];
 
-            console.log(`Found ${contacts.length} total contacts`);
+            console.log(`📊 Got ${contacts.length} contacts to search through`);
 
             // Find contact by name (case insensitive)
             const foundContact = contacts.find(c =>
@@ -124,18 +205,21 @@ export default async function handler(req, res) {
                 console.log(`✅ Found contact via list: ${foundContact.name}`);
                 return res.status(200).json({
                     success: true,
-                    contact: foundContact
+                    contact: foundContact,
+                    method: 'listAndFilter'
                 });
             } else {
-                console.log('❌ Contact not found');
+                console.log('❌ Contact not found in list');
                 return res.status(404).json({
                     success: false,
-                    error: 'Contact not found'
+                    error: 'Contact not found',
+                    totalContacts: contacts.length,
+                    searchedFor: name
                 });
             }
         } else {
-            // No name provided, just test the connection
-            console.log('👥 Testing connection - listing first few contacts...');
+            // No name provided, return debug info
+            console.log('📊 === RETURNING DEBUG INFO ===');
 
             const response = await people.people.connections.list({
                 resourceName: 'people/me',
@@ -148,19 +232,38 @@ export default async function handler(req, res) {
                 email: person.emailAddresses?.[0]?.value || ''
             })) || [];
 
+            console.log('✅ === CONTACTS API DEBUG END ===');
+
             return res.status(200).json({
                 success: true,
                 message: 'Contacts API working!',
                 sampleContacts: contacts,
-                totalFound: contacts.length
+                totalFound: contacts.length,
+                totalSize: response.data.totalSize || 0,
+                debug: {
+                    serviceAccountEmail: SERVICE_ACCOUNT_KEY.client_email,
+                    impersonatingUser: 'dario@shopibro.com',
+                    scopes: ['contacts.readonly', 'contacts']
+                }
             });
         }
 
     } catch (error) {
-        console.error('❌ Contacts API error:', error);
+        console.error('💥 === FATAL ERROR ===');
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error stack:', error.stack);
+
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error response status:', error.response.status);
+        }
+
         return res.status(500).json({
             success: false,
-            error: error.message
+            error: error.message,
+            errorCode: error.code,
+            stack: error.stack
         });
     }
 }
