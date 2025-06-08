@@ -255,7 +255,6 @@ body {
   background: linear-gradient(135deg, #fef3c7, #fed7aa) !important;
   border-left: 5px solid #f59e0b !important;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important;
-  animation: conflictPulse 3s ease-in-out infinite;
 }
 
 .conflict-event .event-time {
