@@ -57,7 +57,8 @@ export default async function handler(req, res) {
             credentials: SERVICE_ACCOUNT_KEY,
             scopes: [
                 'https://www.googleapis.com/auth/contacts.readonly',
-                'https://www.googleapis.com/auth/contacts'
+                'https://www.googleapis.com/auth/contacts',
+                'https://www.googleapis.com/auth/userinfo.profile'
             ],
             // Domain-wide delegation - specify the user to impersonate
             subject: 'dario@shopibro.com'
@@ -243,7 +244,11 @@ export default async function handler(req, res) {
                 debug: {
                     serviceAccountEmail: SERVICE_ACCOUNT_KEY.client_email,
                     impersonatingUser: 'dario@shopibro.com',
-                    scopes: ['contacts.readonly', 'contacts']
+                    scopes: [
+                        'https://www.googleapis.com/auth/contacts.readonly',
+                        'https://www.googleapis.com/auth/contacts',
+                        'https://www.googleapis.com/auth/userinfo.profile'
+                    ]
                 }
             });
         }
