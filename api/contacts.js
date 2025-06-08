@@ -1,4 +1,4 @@
-// api/contacts.js - Debug version with comprehensive logging
+// api/contacts.js - Fixed version without problematic people/me test
 const { google } = require('googleapis');
 
 const SERVICE_ACCOUNT_KEY = {
@@ -74,38 +74,14 @@ export default async function handler(req, res) {
         const people = google.people({ version: 'v1', auth: authClient });
         console.log('📞 People API instance created');
 
-        // Test basic API access first
-        console.log('🧪 === TESTING BASIC API ACCESS ===');
-        try {
-            console.log('🔍 Testing people.get for people/me...');
-            const meResponse = await people.people.get({
-                resourceName: 'people/me',
-                personFields: 'names,emailAddresses'
-            });
-            console.log('✅ people/me test successful:', {
-                name: meResponse.data.names?.[0]?.displayName,
-                email: meResponse.data.emailAddresses?.[0]?.value
-            });
-        } catch (meError) {
-            console.error('❌ people/me test failed:', meError.message);
-            console.error('Error status:', meError.code);
-            console.error('Error details:', meError.response?.data);
-
-            return res.status(500).json({
-                success: false,
-                error: 'Authentication failed',
-                details: meError.message,
-                errorCode: meError.code
-            });
-        }
-
+        // Skip the people/me test and go straight to contacts
         console.log('🧪 === TESTING CONNECTIONS LIST ===');
         try {
             console.log('📋 Testing connections.list...');
             const connectionsResponse = await people.people.connections.list({
                 resourceName: 'people/me',
                 personFields: 'names,emailAddresses,phoneNumbers',
-                pageSize: 5
+                pageSize: 10
             });
 
             const totalConnections = connectionsResponse.data.totalSize || 0;
@@ -114,15 +90,20 @@ export default async function handler(req, res) {
             console.log(`📊 Total connections: ${totalConnections}`);
             console.log(`📋 Returned connections: ${connections.length}`);
 
+            console.log('🎯 === ALL CONTACTS FOUND ===');
+            console.log(`Total contacts: ${connections.length}`);
+            console.log('Full contact list:');
             connections.forEach((connection, index) => {
-                console.log(`Contact ${index + 1}:`, {
-                    name: connection.names?.[0]?.displayName,
-                    email: connection.emailAddresses?.[0]?.value
-                });
+                const contactName = connection.names?.[0]?.displayName || 'No Name';
+                const contactEmail = connection.emailAddresses?.[0]?.value || '';
+                const contactPhone = connection.phoneNumbers?.[0]?.value || '';
+                console.log(`${index + 1}. ${contactName} (${contactEmail}) ${contactPhone}`);
             });
 
             if (connections.length === 0) {
-                console.log('⚠️ No connections found - this might indicate permission issues');
+                console.log('⚠️ No connections found - domain delegation might still be propagating');
+            } else {
+                console.log('🎉 SUCCESS! Domain delegation is working!');
             }
 
         } catch (connectionsError) {
@@ -223,15 +204,22 @@ export default async function handler(req, res) {
 
             const response = await people.people.connections.list({
                 resourceName: 'people/me',
-                personFields: 'names,emailAddresses',
-                pageSize: 5
+                personFields: 'names,emailAddresses,phoneNumbers',
+                pageSize: 100  // Get more contacts
             });
 
             const contacts = response.data.connections?.map(person => ({
                 name: person.names?.[0]?.displayName || 'No Name',
-                email: person.emailAddresses?.[0]?.value || ''
+                email: person.emailAddresses?.[0]?.value || '',
+                phone: person.phoneNumbers?.[0]?.value || ''
             })) || [];
 
+            console.log('🎯 === ALL CONTACTS FOUND ===');
+            console.log(`Total contacts: ${contacts.length}`);
+            console.log('Full contact list:');
+            contacts.forEach((contact, index) => {
+                console.log(`${index + 1}. ${contact.name} (${contact.email}) ${contact.phone || ''}`);
+            });
             console.log('✅ === CONTACTS API DEBUG END ===');
 
             return res.status(200).json({
@@ -243,7 +231,10 @@ export default async function handler(req, res) {
                 debug: {
                     serviceAccountEmail: SERVICE_ACCOUNT_KEY.client_email,
                     impersonatingUser: 'dario@shopibro.com',
-                    scopes: ['contacts.readonly', 'contacts']
+                    scopes: [
+                        'https://www.googleapis.com/auth/contacts.readonly',
+                        'https://www.googleapis.com/auth/contacts'
+                    ]
                 }
             });
         }
