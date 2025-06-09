@@ -75,7 +75,82 @@ export default async function handler(req, res) {
         const people = google.people({ version: 'v1', auth: authClient });
         console.log('📞 People API instance created');
 
-        // Skip the people/me test and go straight to contacts
+        // Add comprehensive diagnostic test
+        console.log('🧪 === COMPREHENSIVE DOMAIN DELEGATION DIAGNOSTIC ===');
+
+        // Test 1: Check authentication method
+        try {
+            console.log('🔍 Testing authentication without impersonation...');
+
+            // Create auth without subject to test base service account
+            const baseAuth = new google.auth.GoogleAuth({
+                credentials: SERVICE_ACCOUNT_KEY,
+                scopes: [
+                    'https://www.googleapis.com/auth/contacts.readonly',
+                    'https://www.googleapis.com/auth/contacts',
+                    'https://www.googleapis.com/auth/userinfo.profile'
+                ]
+                // No subject = service account's own permissions
+            });
+
+            const baseAuthClient = await baseAuth.getClient();
+            const basePeople = google.people({ version: 'v1', auth: baseAuthClient });
+
+            const baseResponse = await basePeople.people.connections.list({
+                resourceName: 'people/me',
+                personFields: 'names',
+                pageSize: 1
+            });
+
+            console.log('✅ Service account base auth works');
+            console.log('📊 Service account contacts:', baseResponse.data.totalSize || 0);
+
+        } catch (baseError) {
+            console.log('⚠️ Service account base auth failed (expected):', baseError.message);
+        }
+
+        // Test 2: Check delegation with better error handling
+        try {
+            console.log('🔍 Testing impersonation auth with detailed errors...');
+
+            const delegatedResponse = await people.people.connections.list({
+                resourceName: 'people/me',
+                personFields: 'names',
+                pageSize: 1
+            });
+
+            console.log('✅ DELEGATION WORKING! Total contacts:', delegatedResponse.data.totalSize || 0);
+
+        } catch (delegationError) {
+            console.error('❌ DELEGATION FAILED - Detailed Error Analysis:');
+            console.error('Error message:', delegationError.message);
+            console.error('Error code:', delegationError.code);
+
+            // Specific error pattern detection
+            if (delegationError.message.includes('unauthorized_client')) {
+                console.error('🚨 UNAUTHORIZED_CLIENT: Domain delegation not properly configured');
+                console.error('   → Check: Multi-party approval requirements');
+                console.error('   → Check: Exact scope matching in Admin Console');
+                console.error('   → Check: Service account Client ID is correct');
+            }
+
+            if (delegationError.message.includes('not authorized')) {
+                console.error('🚨 NOT AUTHORIZED: User or scope permission issue');
+                console.error('   → Check: dario@shopibro.com has logged in and accepted ToS');
+                console.error('   → Check: User has proper Workspace license');
+                console.error('   → Check: Contacts API enabled for domain');
+            }
+
+            if (delegationError.message.includes('forbidden') || delegationError.code === 403) {
+                console.error('🚨 FORBIDDEN: Domain delegation setup issue');
+                console.error('   → Check: Super admin set up the delegation');
+                console.error('   → Check: People API enabled in Google Cloud Console');
+                console.error('   → Wait: Could still be propagating (rare after 20h)');
+            }
+
+            console.error('Full error details:', delegationError.response?.data);
+        }
+
         console.log('🧪 === TESTING CONNECTIONS LIST ===');
         try {
             console.log('📋 Testing connections.list...');
