@@ -1,4 +1,4 @@
-// api/contacts.js - Fixed version without problematic people/me test
+// api/contacts.js - CORRECTED version using JWT for domain delegation
 const { google } = require('googleapis');
 
 const SERVICE_ACCOUNT_KEY = {
@@ -16,7 +16,7 @@ const SERVICE_ACCOUNT_KEY = {
 };
 
 export default async function handler(req, res) {
-    console.log('🚀 === CONTACTS API DEBUG START ===');
+    console.log('🚀 === CONTACTS API DEBUG START (JWT METHOD) ===');
 
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        console.log('🔑 Setting up Google Auth...');
+        console.log('🔑 Setting up JWT Auth for Domain Delegation...');
         console.log('Service account client_email:', SERVICE_ACCOUNT_KEY.client_email);
         console.log('Service account project_id:', SERVICE_ACCOUNT_KEY.project_id);
 
@@ -51,109 +51,44 @@ export default async function handler(req, res) {
         console.log('📝 Request body:', body);
         const { name } = body;
 
-        // Initialize Google Auth with People API scope
-        console.log('🔐 Creating GoogleAuth instance...');
-        const auth = new google.auth.GoogleAuth({
-            credentials: SERVICE_ACCOUNT_KEY,
+        // CORRECTED: Use JWT instead of GoogleAuth for domain delegation
+        console.log('🔐 Creating JWT client for domain delegation...');
+        const jwtClient = new google.auth.JWT({
+            email: SERVICE_ACCOUNT_KEY.client_email,
+            key: SERVICE_ACCOUNT_KEY.private_key,
             scopes: [
                 'https://www.googleapis.com/auth/contacts.readonly',
                 'https://www.googleapis.com/auth/contacts',
                 'https://www.googleapis.com/auth/userinfo.profile'
             ],
-            // Domain-wide delegation - specify the user to impersonate
-            subject: 'dario@shopibro.com'
+            subject: 'dario@shopibro.com'  // This is the user to impersonate
         });
 
         console.log('👤 Impersonating user: dario@shopibro.com');
         console.log('🔑 Requested scopes: contacts.readonly, contacts, userinfo.profile');
 
-        // Get authenticated client
-        console.log('🤝 Getting auth client...');
-        const authClient = await auth.getClient();
-        console.log('✅ Auth client created successfully');
-
-        const people = google.people({ version: 'v1', auth: authClient });
-        console.log('📞 People API instance created');
-
-        // Add comprehensive diagnostic test
-        console.log('🧪 === COMPREHENSIVE DOMAIN DELEGATION DIAGNOSTIC ===');
-
-        // Test 1: Check authentication method
-        try {
-            console.log('🔍 Testing authentication without impersonation...');
-
-            // Create auth without subject to test base service account
-            const baseAuth = new google.auth.GoogleAuth({
-                credentials: SERVICE_ACCOUNT_KEY,
-                scopes: [
-                    'https://www.googleapis.com/auth/contacts.readonly',
-                    'https://www.googleapis.com/auth/contacts',
-                    'https://www.googleapis.com/auth/userinfo.profile'
-                ]
-                // No subject = service account's own permissions
+        // Authorize the JWT client
+        console.log('🤝 Authorizing JWT client...');
+        const tokens = await new Promise((resolve, reject) => {
+            jwtClient.authorize((err, tokens) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(tokens);
+                }
             });
+        });
 
-            const baseAuthClient = await baseAuth.getClient();
-            const basePeople = google.people({ version: 'v1', auth: baseAuthClient });
+        console.log('✅ JWT authorization successful!');
+        console.log('🎫 Access token received (first 20 chars):', tokens.access_token?.substring(0, 20) + '...');
 
-            const baseResponse = await basePeople.people.connections.list({
-                resourceName: 'people/me',
-                personFields: 'names',
-                pageSize: 1
-            });
+        const people = google.people({ version: 'v1', auth: jwtClient });
+        console.log('📞 People API instance created with JWT auth');
 
-            console.log('✅ Service account base auth works');
-            console.log('📊 Service account contacts:', baseResponse.data.totalSize || 0);
-
-        } catch (baseError) {
-            console.log('⚠️ Service account base auth failed (expected):', baseError.message);
-        }
-
-        // Test 2: Check delegation with better error handling
+        // Test the actual delegation
+        console.log('🧪 === TESTING JWT DOMAIN DELEGATION ===');
         try {
-            console.log('🔍 Testing impersonation auth with detailed errors...');
-
-            const delegatedResponse = await people.people.connections.list({
-                resourceName: 'people/me',
-                personFields: 'names',
-                pageSize: 1
-            });
-
-            console.log('✅ DELEGATION WORKING! Total contacts:', delegatedResponse.data.totalSize || 0);
-
-        } catch (delegationError) {
-            console.error('❌ DELEGATION FAILED - Detailed Error Analysis:');
-            console.error('Error message:', delegationError.message);
-            console.error('Error code:', delegationError.code);
-
-            // Specific error pattern detection
-            if (delegationError.message.includes('unauthorized_client')) {
-                console.error('🚨 UNAUTHORIZED_CLIENT: Domain delegation not properly configured');
-                console.error('   → Check: Multi-party approval requirements');
-                console.error('   → Check: Exact scope matching in Admin Console');
-                console.error('   → Check: Service account Client ID is correct');
-            }
-
-            if (delegationError.message.includes('not authorized')) {
-                console.error('🚨 NOT AUTHORIZED: User or scope permission issue');
-                console.error('   → Check: dario@shopibro.com has logged in and accepted ToS');
-                console.error('   → Check: User has proper Workspace license');
-                console.error('   → Check: Contacts API enabled for domain');
-            }
-
-            if (delegationError.message.includes('forbidden') || delegationError.code === 403) {
-                console.error('🚨 FORBIDDEN: Domain delegation setup issue');
-                console.error('   → Check: Super admin set up the delegation');
-                console.error('   → Check: People API enabled in Google Cloud Console');
-                console.error('   → Wait: Could still be propagating (rare after 20h)');
-            }
-
-            console.error('Full error details:', delegationError.response?.data);
-        }
-
-        console.log('🧪 === TESTING CONNECTIONS LIST ===');
-        try {
-            console.log('📋 Testing connections.list...');
+            console.log('🔍 Testing connections.list with JWT delegation...');
             const connectionsResponse = await people.people.connections.list({
                 resourceName: 'people/me',
                 personFields: 'names,emailAddresses,phoneNumbers',
@@ -166,7 +101,7 @@ export default async function handler(req, res) {
             console.log(`📊 Total connections: ${totalConnections}`);
             console.log(`📋 Returned connections: ${connections.length}`);
 
-            console.log('🎯 === ALL CONTACTS FOUND ===');
+            console.log('🎯 === ALL CONTACTS FOUND (JWT METHOD) ===');
             console.log(`Total contacts: ${connections.length}`);
             console.log('Full contact list:');
             connections.forEach((connection, index) => {
@@ -177,21 +112,21 @@ export default async function handler(req, res) {
             });
 
             if (connections.length === 0) {
-                console.log('⚠️ No connections found - domain delegation might still be propagating');
+                console.log('⚠️ Still no connections found - checking if user has contacts...');
             } else {
-                console.log('🎉 SUCCESS! Domain delegation is working!');
+                console.log('🎉 SUCCESS! JWT Domain delegation is working! Found actual contacts!');
             }
 
-        } catch (connectionsError) {
-            console.error('❌ connections.list failed:', connectionsError.message);
-            console.error('Error status:', connectionsError.code);
-            console.error('Error details:', connectionsError.response?.data);
+        } catch (jwtError) {
+            console.error('❌ JWT delegation failed:', jwtError.message);
+            console.error('Error code:', jwtError.code);
+            console.error('Error details:', jwtError.response?.data);
 
             return res.status(500).json({
                 success: false,
-                error: 'Failed to list connections',
-                details: connectionsError.message,
-                errorCode: connectionsError.code
+                error: 'JWT delegation failed',
+                details: jwtError.message,
+                errorCode: jwtError.code
             });
         }
 
@@ -225,7 +160,8 @@ export default async function handler(req, res) {
                     return res.status(200).json({
                         success: true,
                         contact: contact,
-                        method: 'searchContacts'
+                        method: 'searchContacts',
+                        authMethod: 'JWT'
                     });
                 }
             } catch (searchError) {
@@ -263,7 +199,8 @@ export default async function handler(req, res) {
                 return res.status(200).json({
                     success: true,
                     contact: foundContact,
-                    method: 'listAndFilter'
+                    method: 'listAndFilter',
+                    authMethod: 'JWT'
                 });
             } else {
                 console.log('❌ Contact not found in list');
@@ -271,12 +208,13 @@ export default async function handler(req, res) {
                     success: false,
                     error: 'Contact not found',
                     totalContacts: contacts.length,
-                    searchedFor: name
+                    searchedFor: name,
+                    authMethod: 'JWT'
                 });
             }
         } else {
             // No name provided, return debug info
-            console.log('📊 === RETURNING DEBUG INFO ===');
+            console.log('📊 === RETURNING DEBUG INFO (JWT METHOD) ===');
 
             const response = await people.people.connections.list({
                 resourceName: 'people/me',
@@ -290,20 +228,21 @@ export default async function handler(req, res) {
                 phone: person.phoneNumbers?.[0]?.value || ''
             })) || [];
 
-            console.log('🎯 === ALL CONTACTS FOUND ===');
+            console.log('🎯 === ALL CONTACTS FOUND (JWT METHOD) ===');
             console.log(`Total contacts: ${contacts.length}`);
             console.log('Full contact list:');
             contacts.forEach((contact, index) => {
                 console.log(`${index + 1}. ${contact.name} (${contact.email}) ${contact.phone || ''}`);
             });
-            console.log('✅ === CONTACTS API DEBUG END ===');
+            console.log('✅ === CONTACTS API DEBUG END (JWT METHOD) ===');
 
             return res.status(200).json({
                 success: true,
-                message: 'Contacts API working!',
+                message: 'Contacts API working with JWT!',
                 sampleContacts: contacts,
                 totalFound: contacts.length,
                 totalSize: response.data.totalSize || 0,
+                authMethod: 'JWT',
                 debug: {
                     serviceAccountEmail: SERVICE_ACCOUNT_KEY.client_email,
                     impersonatingUser: 'dario@shopibro.com',
@@ -317,7 +256,7 @@ export default async function handler(req, res) {
         }
 
     } catch (error) {
-        console.error('💥 === FATAL ERROR ===');
+        console.error('💥 === FATAL ERROR (JWT METHOD) ===');
         console.error('Error message:', error.message);
         console.error('Error code:', error.code);
         console.error('Error stack:', error.stack);
@@ -331,6 +270,7 @@ export default async function handler(req, res) {
             success: false,
             error: error.message,
             errorCode: error.code,
+            authMethod: 'JWT',
             stack: error.stack
         });
     }
