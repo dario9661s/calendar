@@ -385,6 +385,67 @@ body {
   }
 }
 
+/* Add these CSS rules to fix long URL overflow */
+
+.event-description {
+  font-size: 13px;
+  color: var(--tg-hint-color);
+  line-height: 1.4;
+
+  /* NEW: Fix long URLs */
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+
+  /* Truncate very long URLs */
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Show max 3 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Alternative: Hide URLs completely and show "..." */
+.event-description.hide-urls {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Better solution: Style Zoom links specifically */
+.event-description a {
+  color: var(--tg-button-color);
+  text-decoration: none;
+  font-size: 12px;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-description a:before {
+  content: "🔗 ";
+  margin-right: 4px;
+}
+
+/* For the timeline view specifically */
+.timeline-container .event-item {
+  margin-bottom: 6px;
+  margin-top: 2px;
+  min-width: 0; /* Important for flex containers */
+  overflow: hidden; /* Prevent overflow */
+}
+
+.slot-content {
+  flex: 1;
+  min-height: 50px;
+  min-width: 0; /* Critical for text truncation */
+  overflow: hidden;
+}
+
 .free-time-slot {
   transition: all 0.2s ease;
 }
