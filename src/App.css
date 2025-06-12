@@ -359,7 +359,15 @@ body {
   background-color: #f0f0f0;
   transform: scale(1.02);
 }
+.free-time-slot:hover {
+  background-color: #f0f8ff;
+  transform: scale(1.02);
+  transition: all 0.2s ease;
+}
 
+.free-time-slot:active {
+  transform: scale(0.98);
+}
 /* Adjust existing event items for timeline */
 .timeline-container .event-item {
   margin-bottom: 6px;

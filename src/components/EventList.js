@@ -112,20 +112,46 @@ function EventsList({ events, date }) {
                                     className="free-time-slot"
                                     onClick={() => {
                                         const timeSlot = slot.time12;
-                                        // Don't redeclare 'date' - it's already a prop!
                                         const dateString = format(date, 'yyyy-MM-dd');
+                                        const message = `sam at ${timeSlot} on ${dateString}`;
 
-                                        // Check if we're in a Telegram Web App
-                                        if (window.Telegram && window.Telegram.WebApp) {
-                                            // Send data directly to the bot!
-                                            const message = `sam at ${timeSlot} on ${dateString}`;
+                                        // Copy to clipboard
+                                        navigator.clipboard.writeText(message).then(() => {
+                                            // Visual feedback
+                                            const button = event.currentTarget;
+                                            const originalText = button.querySelector('.free-time-text').textContent;
+                                            button.querySelector('.free-time-text').textContent = '✅ Copied!';
+                                            button.style.backgroundColor = '#e8f5e9';
 
-                                            // This will close the mini app and send data to bot
-                                            window.Telegram.WebApp.sendData(message);
-                                        } else {
-                                            // Fallback for regular browser
-                                            alert('Please open this in Telegram');
-                                        }
+                                            setTimeout(() => {
+                                                button.querySelector('.free-time-text').textContent = originalText;
+                                                button.style.backgroundColor = '';
+                                            }, 2000);
+
+                                            // Show instructions
+                                            const instructionDiv = document.createElement('div');
+                                            instructionDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #4CAF50;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                z-index: 9999;
+                font-size: 16px;
+            `;
+                                            instructionDiv.textContent = 'Time slot copied! Paste in Telegram chat.';
+                                            document.body.appendChild(instructionDiv);
+
+                                            setTimeout(() => {
+                                                document.body.removeChild(instructionDiv);
+                                            }, 3000);
+                                        }).catch(() => {
+                                            alert(`Copy this message:\n\n${message}`);
+                                        });
                                     }}
                                     style={{cursor: 'pointer'}}
                                 >
