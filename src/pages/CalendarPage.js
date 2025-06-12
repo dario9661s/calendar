@@ -47,17 +47,7 @@ function CalendarPage() {
             setError(null);
             console.log('🚀 Loading calendar events...');
 
-            const calendarEvents = await loadGoogleCalendarEvents(targetDate);
-
-            // Get conflict times from URL parameters
-            const urlParams = new URLSearchParams(location.search);
-            const conflictParam = urlParams.get('conflicts');
-            const conflictTimes = conflictParam ? decodeURIComponent(conflictParam).split('|') : [];
-
-            console.log('URL conflict parameter:', conflictParam);
-            console.log('Parsed conflict times:', conflictTimes);
-
-            // Get the actual target date from URL, not from state
+            // ✅ Define targetDate FIRST
             let targetDate = new Date(); // default
             if (date) {
                 try {
@@ -68,12 +58,23 @@ function CalendarPage() {
                 }
             }
 
-            // Mark events as conflicts based on URL parameters - USE targetDate not selectedDate
+            // ✅ NOW use it
+            const calendarEvents = await loadGoogleCalendarEvents(targetDate);
+
+            // Get conflict times from URL parameters
+            const urlParams = new URLSearchParams(location.search);
+            const conflictParam = urlParams.get('conflicts');
+            const conflictTimes = conflictParam ? decodeURIComponent(conflictParam).split('|') : [];
+
+            console.log('URL conflict parameter:', conflictParam);
+            console.log('Parsed conflict times:', conflictTimes);
+
+            // Mark events as conflicts based on URL parameters
             const eventsWithConflicts = markConflictEvents(calendarEvents, conflictTimes, targetDate);
             setEvents(eventsWithConflicts);
 
             console.log('✅ Calendar events loaded successfully');
-            console.log('All events loaded:', events.map(e => ({
+            console.log('All events loaded:', eventsWithConflicts.map(e => ({
                 title: e.title,
                 start: e.start,
                 parsedDate: new Date(e.start).toLocaleString()
@@ -85,7 +86,6 @@ function CalendarPage() {
             setLoading(false);
         }
     };
-
     // Convert 12-hour time to 24-hour time for comparison
     const convertTo24Hour = (time12h) => {
         const [time, modifier] = time12h.split(/\s*(AM|PM)/i);
