@@ -73,6 +73,11 @@ function CalendarPage() {
             setEvents(eventsWithConflicts);
 
             console.log('✅ Calendar events loaded successfully');
+            console.log('All events loaded:', events.map(e => ({
+                title: e.title,
+                start: e.start,
+                parsedDate: new Date(e.start).toLocaleString()
+            })));
         } catch (err) {
             setError('Failed to load calendar events: ' + err.message);
             console.error('Calendar load error:', err);
