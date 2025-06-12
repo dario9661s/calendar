@@ -111,18 +111,17 @@ function EventsList({ events, date }) {
                                 <div
                                     className="free-time-slot"
                                     onClick={() => {
-                                        // Send to webhook
                                         fetch('https://shpiiman.app.n8n.cloud/webhook/calendar-free-slot', {
                                             method: 'POST',
-                                            mode: 'no-cors',  // This bypasses CORS
                                             headers: {
-                                                'Content-Type': 'application/json'
+                                                'Content-Type': 'text/plain'  // This avoids CORS preflight!
                                             },
                                             body: JSON.stringify({
                                                 timeSlot: slot.time12,
                                                 date: format(date, 'yyyy-MM-dd')
                                             })
                                         })
+                                            .then(response => response.json())
                                             .then(() => {
                                                 alert('Time slot sent! You can close this window.');
                                             })
