@@ -114,14 +114,13 @@ function EventsList({ events, date }) {
                                         fetch('https://shpilman.app.n8n.cloud/webhook/calendar-free-slot', {
                                             method: 'POST',
                                             headers: {
-                                                'Content-Type': 'text/plain'  // This avoids CORS preflight!
+                                                'Content-Type': 'application/json'
                                             },
                                             body: JSON.stringify({
                                                 timeSlot: slot.time12,
                                                 date: format(date, 'yyyy-MM-dd')
                                             })
                                         })
-                                            .then(response => response.json())
                                             .then(() => {
                                                 alert('Time slot sent! You can close this window.');
                                             })
