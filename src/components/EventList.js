@@ -112,12 +112,13 @@ function EventsList({ events, date }) {
                                     className="free-time-slot"
                                     onClick={() => {
                                         const timeSlot = slot.time12;
-                                        const date = format(date, 'yyyy-MM-dd');
+                                        // Don't redeclare 'date' - it's already a prop!
+                                        const dateString = format(date, 'yyyy-MM-dd');
 
                                         // Check if we're in a Telegram Web App
                                         if (window.Telegram && window.Telegram.WebApp) {
                                             // Send data directly to the bot!
-                                            const message = `sam at ${timeSlot} on ${date}`;
+                                            const message = `sam at ${timeSlot} on ${dateString}`;
 
                                             // This will close the mini app and send data to bot
                                             window.Telegram.WebApp.sendData(message);
