@@ -114,6 +114,7 @@ function EventsList({ events, date }) {
                                         // Send to webhook
                                         fetch('https://shpiiman.app.n8n.cloud/webhook/calendar-free-slot', {
                                             method: 'POST',
+                                            mode: 'no-cors',  // This bypasses CORS
                                             headers: {
                                                 'Content-Type': 'application/json'
                                             },
