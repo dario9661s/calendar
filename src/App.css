@@ -355,6 +355,11 @@ body {
   opacity: 0.8;
 }
 
+.free-time-slot:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.02);
+}
+
 /* Adjust existing event items for timeline */
 .timeline-container .event-item {
   margin-bottom: 6px;

@@ -108,8 +108,31 @@ function EventsList({ events, date }) {
                                     </div>
                                 ))
                             ) : (
-                                <div className="free-time-slot">
-                                    <span className="free-time-text">🕊️ Free time</span>
+                                <div
+                                    className="free-time-slot"
+                                    onClick={() => {
+                                        // Send to webhook
+                                        fetch('https://shpiiman.app.n8n.cloud/webhook-test/calendar-free-slot', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                                timeSlot: slot.time12,
+                                                date: format(date, 'yyyy-MM-dd')
+                                            })
+                                        })
+                                            .then(() => {
+                                                alert('Time slot sent! You can close this window.');
+                                            })
+                                            .catch((error) => {
+                                                console.error('Error sending time slot:', error);
+                                                alert('Failed to send time slot');
+                                            });
+                                    }}
+                                    style={{cursor: 'pointer'}}
+                                >
+                                    <span className="free-time-text">🕊️ Free time - Click to select</span>
                                 </div>
                             )}
                         </div>
