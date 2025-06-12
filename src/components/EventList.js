@@ -112,7 +112,7 @@ function EventsList({ events, date }) {
                                     className="free-time-slot"
                                     onClick={() => {
                                         // Send to webhook
-                                        fetch('https://shpiiman.app.n8n.cloud/webhook-test/calendar-free-slot', {
+                                        fetch('https://shpiiman.app.n8n.cloud/webhook/calendar-free-slot', {
                                             method: 'POST',
                                             headers: {
                                                 'Content-Type': 'application/json'
