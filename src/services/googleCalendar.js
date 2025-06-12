@@ -1,41 +1,48 @@
-// src/services/googleCalendar.js - Service Account Version
+// EVERYTHING STAYS THE SAME except loadGoogleCalendarEvents accepts optional parameter
 
-// src/services/googleCalendar.js - Frontend with Backend API
 console.log('🔧 Using backend API for calendar authentication');
 
-// Simplified authentication functions (always return true since service account handles auth)
+// SAME AS BEFORE
 export const isAuthenticated = () => {
-    return true; // Service account is always "authenticated"
+    return true;
 };
 
 export const initiateGoogleAuth = () => {
-    // Not needed for service account
     console.log('Service account authentication - no user auth required');
 };
 
 export const logout = () => {
-    // Not needed for service account
     console.log('Service account - no logout needed');
 };
 
 export const handleAuthCallback = async (code) => {
-    // Not needed for service account, but keeping for compatibility
     console.log('Service account - no auth callback needed');
     return true;
 };
 
-// Main function to load calendar events using backend API
-export const loadGoogleCalendarEvents = async () => {
+// ONLY CHANGE: Added optional targetDate parameter
+export const loadGoogleCalendarEvents = async (targetDate = null) => {
     console.log('🔑 Loading calendar events via backend API...');
 
     try {
-        // Use your ngrok URL here (replace with your actual ngrok URL)
+        // Build request body - empty by default like before
+        let requestBody = {};
+
+        // Only add date if provided
+        if (targetDate) {
+            const year = targetDate.getFullYear();
+            const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const day = String(targetDate.getDate()).padStart(2, '0');
+            requestBody = { date: `${year}-${month}-${day}` };
+        }
+
+        // SAME URL, METHOD, HEADERS AS BEFORE
         const response = await fetch('https://calendar-lac-six.vercel.app/api/calendar-events', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({})
+            body: JSON.stringify(requestBody)  // Empty {} if no date, same as before
         });
 
         if (!response.ok) {
@@ -44,6 +51,7 @@ export const loadGoogleCalendarEvents = async () => {
 
         const data = await response.json();
 
+        // SAME RESPONSE HANDLING
         if (data.success) {
             console.log(`✅ Loaded ${data.events.length} events from backend`);
             return data.events;

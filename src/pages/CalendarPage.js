@@ -47,7 +47,7 @@ function CalendarPage() {
             setError(null);
             console.log('🚀 Loading calendar events...');
 
-            const calendarEvents = await loadGoogleCalendarEvents();
+            const calendarEvents = await loadGoogleCalendarEvents(targetDate);
 
             // Get conflict times from URL parameters
             const urlParams = new URLSearchParams(location.search);
