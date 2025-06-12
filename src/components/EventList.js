@@ -111,23 +111,20 @@ function EventsList({ events, date }) {
                                 <div
                                     className="free-time-slot"
                                     onClick={() => {
-                                        fetch('https://shpilman.app.n8n.cloud/webhook/calendar-free-slot', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json'
-                                            },
-                                            body: JSON.stringify({
-                                                timeSlot: slot.time12,
-                                                date: format(date, 'yyyy-MM-dd')
-                                            })
-                                        })
-                                            .then(() => {
-                                                alert('Time slot sent! You can close this window.');
-                                            })
-                                            .catch((error) => {
-                                                console.error('Error sending time slot:', error);
-                                                alert('Failed to send time slot');
-                                            });
+                                        const timeSlot = slot.time12;
+                                        const date = format(date, 'yyyy-MM-dd');
+
+                                        // Check if we're in a Telegram Web App
+                                        if (window.Telegram && window.Telegram.WebApp) {
+                                            // Send data directly to the bot!
+                                            const message = `sam at ${timeSlot} on ${date}`;
+
+                                            // This will close the mini app and send data to bot
+                                            window.Telegram.WebApp.sendData(message);
+                                        } else {
+                                            // Fallback for regular browser
+                                            alert('Please open this in Telegram');
+                                        }
                                     }}
                                     style={{cursor: 'pointer'}}
                                 >
