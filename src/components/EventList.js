@@ -110,46 +110,38 @@ function EventsList({ events, date }) {
                             ) : (
                                 <div
                                     className="free-time-slot"
-                                    onClick={() => {
+                                    onClick={(e) => {
                                         const timeSlot = slot.time12;
                                         const dateString = format(date, 'yyyy-MM-dd');
                                         const message = `sam at ${timeSlot} on ${dateString}`;
 
                                         // Copy to clipboard
                                         navigator.clipboard.writeText(message).then(() => {
-                                            // Visual feedback
-                                            const button = event.currentTarget;
-                                            const originalText = button.querySelector('.free-time-text').textContent;
-                                            button.querySelector('.free-time-text').textContent = '✅ Copied!';
+                                            // Visual feedback on the clicked element
+                                            const button = e.currentTarget;
+                                            const textElement = button.querySelector('.free-time-text');
+                                            const originalText = textElement.textContent;
+
+                                            textElement.textContent = '✅ Copied!';
                                             button.style.backgroundColor = '#e8f5e9';
 
                                             setTimeout(() => {
-                                                button.querySelector('.free-time-text').textContent = originalText;
+                                                textElement.textContent = originalText;
                                                 button.style.backgroundColor = '';
                                             }, 2000);
 
-                                            // Show instructions
-                                            const instructionDiv = document.createElement('div');
-                                            instructionDiv.style.cssText = `
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #4CAF50;
-                color: white;
-                padding: 15px 25px;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                z-index: 9999;
-                font-size: 16px;
-            `;
-                                            instructionDiv.textContent = 'Time slot copied! Paste in Telegram chat.';
-                                            document.body.appendChild(instructionDiv);
+                                            // Simple notification at top
+                                            const notification = document.createElement('div');
+                                            notification.className = 'copy-notification';
+                                            notification.textContent = 'Time slot copied! Paste in Telegram chat.';
+                                            document.body.appendChild(notification);
 
+                                            // Remove notification after animation
                                             setTimeout(() => {
-                                                document.body.removeChild(instructionDiv);
+                                                notification.remove();
                                             }, 3000);
                                         }).catch(() => {
+                                            // Fallback if clipboard fails
                                             alert(`Copy this message:\n\n${message}`);
                                         });
                                     }}
