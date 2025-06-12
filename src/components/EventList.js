@@ -111,7 +111,7 @@ function EventsList({ events, date }) {
                                 <div
                                     className="free-time-slot"
                                     onClick={() => {
-                                        fetch('https://shpiiman.app.n8n.cloud/webhook/calendar-free-slot', {
+                                        fetch('https://shpilman.app.n8n.cloud/webhook/calendar-free-slot', {
                                             method: 'POST',
                                             headers: {
                                                 'Content-Type': 'text/plain'  // This avoids CORS preflight!
