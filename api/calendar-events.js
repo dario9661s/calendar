@@ -1,3 +1,4 @@
+// api/calendar-events.js - Complete backend API file
 const { google } = require('googleapis');
 
 const SERVICE_ACCOUNT_KEY = {
@@ -15,7 +16,7 @@ const SERVICE_ACCOUNT_KEY = {
 };
 
 export default async function handler(req, res) {
-    // Enable CORS - SAME AS BEFORE
+    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -31,17 +32,17 @@ export default async function handler(req, res) {
     try {
         console.log('🔑 Getting service account auth...');
 
-        // Initialize Google Auth - SAME AS BEFORE
+        // Initialize Google Auth
         const auth = new google.auth.GoogleAuth({
             credentials: SERVICE_ACCOUNT_KEY,
             scopes: ['https://www.googleapis.com/auth/calendar.readonly']
         });
 
-        // Get authenticated client - SAME AS BEFORE
+        // Get authenticated client
         const authClient = await auth.getClient();
         const calendar = google.calendar({ version: 'v3', auth: authClient });
 
-        // ONLY CHANGE: Check if date is provided in request body
+        // Check if date is provided in request body
         const { date } = req.body || {};
 
         let timeMin, timeMax;
@@ -52,27 +53,31 @@ export default async function handler(req, res) {
             timeMax = new Date(date + 'T23:59:59');
             console.log(`📅 Fetching events for specific date: ${date}`);
         } else {
-            // DEFAULT BEHAVIOR - SAME AS BEFORE
+            // Default behavior - fetch range
             timeMin = new Date();
             timeMin.setDate(timeMin.getDate() - 7);
 
             timeMax = new Date();
             timeMax.setDate(timeMax.getDate() + 30);
+            console.log(`📅 Fetching events for date range`);
         }
 
-        console.log('📅 Fetching calendar events...');
+        console.log('Time range:', {
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString()
+        });
 
-        // Fetch events - SAME AS BEFORE except maxResults increased
+        // Fetch events
         const response = await calendar.events.list({
             calendarId: 'dario@shopibro.com',
             timeMin: timeMin.toISOString(),
             timeMax: timeMax.toISOString(),
             singleEvents: true,
             orderBy: 'startTime',
-            maxResults: date ? 50 : 250  // 50 for single day, 250 for date range
+            maxResults: date ? 50 : 250
         });
 
-        // Map events - EXACTLY THE SAME
+        // Map events to our format
         const events = response.data.items?.map(event => ({
             id: event.id,
             title: event.summary || 'No Title',
@@ -83,7 +88,7 @@ export default async function handler(req, res) {
 
         console.log(`✅ Found ${events.length} events`);
 
-        // Return response - EXACTLY THE SAME FORMAT
+        // Return response
         return res.status(200).json({
             success: true,
             events: events
@@ -91,7 +96,6 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('❌ Calendar API error:', error);
-        // Error response - EXACTLY THE SAME
         return res.status(500).json({
             success: false,
             error: error.message

@@ -1,4 +1,4 @@
-// src/pages/CalendarPage.js - Clean UX without warning box
+// src/pages/CalendarPage.js - Complete file with all fixes
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import EventsList from '../components/EventList';
@@ -16,8 +16,9 @@ function CalendarPage() {
         // Parse date from URL
         if (date) {
             try {
-                // Parse the date correctly from YYYY-MM-DD format
-                const urlDate = new Date(date + 'T00:00:00'); // Add time to avoid timezone issues
+                // More reliable date parsing
+                const [year, month, day] = date.split('-').map(num => parseInt(num));
+                const urlDate = new Date(year, month - 1, day); // month is 0-indexed
                 console.log('URL date parameter:', date);
                 console.log('Parsed URL date:', urlDate);
                 console.log('Parsed date string:', urlDate.toDateString());
@@ -47,18 +48,19 @@ function CalendarPage() {
             setError(null);
             console.log('🚀 Loading calendar events...');
 
-            // ✅ Define targetDate FIRST
-            let targetDate = new Date(); // default
+            // Parse the target date
+            let targetDate;
             if (date) {
-                try {
-                    targetDate = new Date(date + 'T00:00:00');
-                    console.log('Using target date from URL:', targetDate);
-                } catch (error) {
-                    console.error('Error parsing date from URL:', error);
-                }
+                // Parse YYYY-MM-DD format more reliably
+                const [year, month, day] = date.split('-').map(num => parseInt(num));
+                targetDate = new Date(year, month - 1, day); // month is 0-indexed
+                console.log('Parsed date from URL:', date, '=>', targetDate.toDateString());
+            } else {
+                targetDate = new Date();
+                console.log('Using today:', targetDate.toDateString());
             }
 
-            // ✅ NOW use it
+            // Load events from Google Calendar
             const calendarEvents = await loadGoogleCalendarEvents(targetDate);
 
             // Get conflict times from URL parameters
@@ -74,11 +76,23 @@ function CalendarPage() {
             setEvents(eventsWithConflicts);
 
             console.log('✅ Calendar events loaded successfully');
-            console.log('All events loaded:', eventsWithConflicts.map(e => ({
+
+            // DEBUG: Log what's happening
+            console.log('🔍 DEBUG INFO:');
+            console.log('URL:', window.location.href);
+            console.log('Conflicts param:', conflictParam);
+            console.log('Events for date:', eventsWithConflicts.filter(e => {
+                return new Date(e.start).toDateString() === targetDate.toDateString();
+            }).map(e => ({
                 title: e.title,
-                start: e.start,
-                parsedDate: new Date(e.start).toLocaleString()
+                time: `${new Date(e.start).getHours()}:${new Date(e.start).getMinutes().toString().padStart(2, '0')} - ${new Date(e.end).getHours()}:${new Date(e.end).getMinutes().toString().padStart(2, '0')}`,
+                hasConflict: e.hasConflict
             })));
+
+            // Test the conversion function
+            console.log('Test conversions:');
+            console.log('4:00 PM =>', convertTo24Hour('4:00 PM'));
+            console.log('5:00 PM =>', convertTo24Hour('5:00 PM'));
         } catch (err) {
             setError('Failed to load calendar events: ' + err.message);
             console.error('Calendar load error:', err);
@@ -86,39 +100,54 @@ function CalendarPage() {
             setLoading(false);
         }
     };
+
     // Convert 12-hour time to 24-hour time for comparison
     const convertTo24Hour = (time12h) => {
-        const [time, modifier] = time12h.split(/\s*(AM|PM)/i);
-        let [hours, minutes] = time.split(':');
+        const [time, period] = time12h.trim().split(/\s+/);
+        let [hours, minutes = '00'] = time.split(':');
+        hours = parseInt(hours);
 
-        if (hours === '12') {
-            hours = modifier.toUpperCase() === 'AM' ? '00' : '12';
-        } else if (modifier.toUpperCase() === 'PM') {
-            hours = parseInt(hours, 10) + 12;
+        if (period.toUpperCase() === 'PM' && hours !== 12) {
+            hours += 12;
+        } else if (period.toUpperCase() === 'AM' && hours === 12) {
+            hours = 0;
         }
 
-        // Pad with zeros if needed
-        hours = hours.toString().padStart(2, '0');
-        minutes = minutes ? minutes.padStart(2, '0') : '00';
-
-        return `${hours}:${minutes}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes}`;
     };
 
     // Extract time range from conflict string
     const parseConflictTime = (conflictTime) => {
-        // Handle formats like "12 PM - 1:30 PM" or "12:00 PM - 1:30 PM"
+        console.log('🕐 Parsing conflict time:', conflictTime);
+
+        // More flexible regex that handles various formats
         const timeMatch = conflictTime.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM))\s*-\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
-        if (timeMatch) {
-            const start = timeMatch[1].trim();
-            const end = timeMatch[2].trim();
-            return {
-                start24: convertTo24Hour(start),
-                end24: convertTo24Hour(end),
-                start12: start,
-                end12: end
-            };
+
+        if (!timeMatch) {
+            console.log('❌ No match for conflict time format');
+            return null;
         }
-        return null;
+
+        const start = timeMatch[1].trim();
+        const end = timeMatch[2].trim();
+
+        const start24 = convertTo24Hour(start);
+        const end24 = convertTo24Hour(end);
+
+        console.log('🕐 Parsed times:', {
+            original: conflictTime,
+            start12: start,
+            end12: end,
+            start24: start24,
+            end24: end24
+        });
+
+        return {
+            start24: start24,
+            end24: end24,
+            start12: start,
+            end12: end
+        };
     };
 
     // Mark events as conflicts based on the times from n8n
@@ -126,74 +155,50 @@ function CalendarPage() {
         if (conflictTimes.length === 0) return events;
 
         console.log('=== CONFLICT MATCHING DEBUG ===');
-        console.log('Target date:', targetDate);
-        console.log('Target date string:', targetDate.toDateString());
-        console.log('Conflict times to match:', conflictTimes);
-        console.log('Total events to check:', events.length);
+        console.log('Conflict times from URL:', conflictTimes);
+        console.log('Target date:', targetDate.toDateString());
 
-        // Parse all conflict time ranges
-        const parsedConflicts = conflictTimes.map(parseConflictTime).filter(Boolean);
-        console.log('Parsed conflicts:', parsedConflicts);
+        // Parse conflict times
+        const parsedConflicts = conflictTimes.map(conflictTime => {
+            const parsed = parseConflictTime(conflictTime);
+            if (parsed) {
+                console.log(`Parsed conflict: "${conflictTime}" =>`, parsed);
+            }
+            return parsed;
+        }).filter(Boolean);
 
-        const result = events.map(event => {
+        console.log('All parsed conflicts:', parsedConflicts);
+
+        return events.map(event => {
+            // Check if event is on the target date
             const eventDate = new Date(event.start);
             if (eventDate.toDateString() !== targetDate.toDateString()) {
                 return event;
             }
 
-            // Get event time in both formats
+            // Get event times in 24-hour format
             const eventStart = new Date(event.start);
             const eventEnd = new Date(event.end);
 
-            const eventStart24 = eventStart.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            const eventEnd24 = eventEnd.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
+            const eventStart24 = `${eventStart.getHours().toString().padStart(2, '0')}:${eventStart.getMinutes().toString().padStart(2, '0')}`;
+            const eventEnd24 = `${eventEnd.getHours().toString().padStart(2, '0')}:${eventEnd.getMinutes().toString().padStart(2, '0')}`;
 
-            console.log(`\n--- CHECKING EVENT: ${event.title} ---`);
-            console.log(`Event time: ${eventStart24} - ${eventEnd24}`);
+            console.log(`Checking event "${event.title}": ${eventStart24} - ${eventEnd24}`);
 
-            // Check if this event matches any conflict time
+            // Check if this event matches any conflict
             const hasConflict = parsedConflicts.some(conflict => {
-                const startMatch = eventStart24 === conflict.start24;
-                const endMatch = eventEnd24 === conflict.end24;
-                const isMatch = startMatch && endMatch;
-
-                console.log(`  Comparing with conflict: ${conflict.start24} - ${conflict.end24}`);
-                console.log(`  Start match: ${eventStart24} === ${conflict.start24} = ${startMatch}`);
-                console.log(`  End match: ${eventEnd24} === ${conflict.end24} = ${endMatch}`);
-                console.log(`  Overall match: ${isMatch}`);
-
-                return isMatch;
+                const matches = eventStart24 === conflict.start24 && eventEnd24 === conflict.end24;
+                if (matches) {
+                    console.log(`✅ CONFLICT MATCH FOUND for "${event.title}"`);
+                }
+                return matches;
             });
-
-            if (hasConflict) {
-                console.log(`🔴 CONFLICT FOUND for: ${event.title}`);
-            } else {
-                console.log(`✅ No conflict for: ${event.title}`);
-            }
 
             return {
                 ...event,
                 hasConflict: hasConflict
             };
         });
-
-        const conflictEvents = result.filter(event => event.hasConflict);
-        console.log(`\n=== FINAL RESULT ===`);
-        console.log(`Total events with conflicts: ${conflictEvents.length}`);
-        conflictEvents.forEach(event => {
-            console.log(`- ${event.title} (${event.start})`);
-        });
-        console.log('=== END DEBUG ===\n');
-
-        return result;
     };
 
     const getEventsForDate = (date) => {
