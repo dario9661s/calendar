@@ -16,6 +16,13 @@ function EventsList({ events, date }) {
         return '📅';
     };
 
+    // Calendar priority for overlapping events
+    const CALENDAR_PRIORITY = {
+        'Family': 1,  // Highest priority
+        'Work': 2,
+        'Team': 3
+    };
+
     // Generate time slots from 8 AM to 8 PM
     const generateTimeSlots = () => {
         const slots = [];
@@ -30,6 +37,40 @@ function EventsList({ events, date }) {
             });
         }
         return slots;
+    };
+
+    // Group overlapping events
+    const groupOverlappingEvents = (slotEvents) => {
+        const groups = [];
+
+        slotEvents.forEach(event => {
+            const eventStart = new Date(event.start).getTime();
+            const eventEnd = new Date(event.end).getTime();
+
+            let addedToGroup = false;
+
+            for (const group of groups) {
+                // Check if event overlaps with any event in this group
+                const overlaps = group.some(groupEvent => {
+                    const groupStart = new Date(groupEvent.start).getTime();
+                    const groupEnd = new Date(groupEvent.end).getTime();
+
+                    return (eventStart < groupEnd && eventEnd > groupStart);
+                });
+
+                if (overlaps) {
+                    group.push(event);
+                    addedToGroup = true;
+                    break;
+                }
+            }
+
+            if (!addedToGroup) {
+                groups.push([event]);
+            }
+        });
+
+        return groups;
     };
 
     // Place events in their corresponding time slots
@@ -79,80 +120,145 @@ function EventsList({ events, date }) {
             </div>
 
             <div className="timeline-container">
-                {timelineData.map((slot, index) => (
-                    <div key={slot.hour} className="timeline-slot">
-                        <div className="time-label">
-                            {slot.time12}
-                        </div>
-                        <div className="slot-content">
-                            {slot.events.length > 0 ? (
-                                slot.events.map((event, eventIndex) => (
+                {timelineData.map((slot, index) => {
+                    const overlappingGroups = groupOverlappingEvents(slot.events);
+
+                    return (
+                        <div key={slot.hour} className="timeline-slot">
+                            <div className="time-label">
+                                {slot.time12}
+                            </div>
+                            <div className="slot-content">
+                                {overlappingGroups.length > 0 ? (
+                                    overlappingGroups.map((group, groupIndex) => {
+                                        // Sort by priority
+                                        const sortedGroup = [...group].sort((a, b) =>
+                                            (CALENDAR_PRIORITY[a.calendarName] || 999) -
+                                            (CALENDAR_PRIORITY[b.calendarName] || 999)
+                                        );
+
+                                        const primaryEvent = sortedGroup[0];
+                                        const overlappingEvents = sortedGroup.slice(1);
+
+                                        return (
+                                            <div
+                                                key={primaryEvent.id || groupIndex}
+                                                className={`event-item ${primaryEvent.hasConflict ? 'conflict-event' : ''}`}
+                                                style={{
+                                                    borderLeft: `4px solid ${primaryEvent.calendarColor || '#4285F4'}`
+                                                }}
+                                            >
+                                                <div className="event-header">
+                                                    <span
+                                                        className="calendar-badge"
+                                                        style={{backgroundColor: primaryEvent.calendarColor || '#4285F4'}}
+                                                    >
+                                                        {primaryEvent.calendarName || 'Calendar'}
+                                                    </span>
+
+                                                    {/* Show overlap indicators */}
+                                                    {overlappingEvents.length > 0 && (
+                                                        <div className="overlap-pills">
+                                                            {overlappingEvents.map((event, idx) => (
+                                                                <span
+                                                                    key={idx}
+                                                                    className="mini-pill"
+                                                                    style={{backgroundColor: event.calendarColor || '#999'}}
+                                                                    title={`Also scheduled: ${event.title} (${event.calendarName})`}
+                                                                >
+                                                                    {(event.calendarName || 'C')[0]}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {primaryEvent.hasConflict && <span className="conflict-indicator-icon">⚡</span>}
+                                                </div>
+
+                                                <div className="event-time">
+                                                    {format(new Date(primaryEvent.start), 'h:mm a')} - {format(new Date(primaryEvent.end), 'h:mm a')}
+                                                </div>
+
+                                                <div className="event-title">
+                                                    {primaryEvent.title}
+                                                    {primaryEvent.hasConflict && (
+                                                        <span className="conflict-text">SCHEDULING CONFLICT</span>
+                                                    )}
+                                                </div>
+
+                                                {primaryEvent.description && (
+                                                    <div className="event-description">{primaryEvent.description}</div>
+                                                )}
+
+                                                {/* Hover tooltip for overlapping events */}
+                                                {overlappingEvents.length > 0 && (
+                                                    <div className="overlap-tooltip">
+                                                        <div className="tooltip-header">Also scheduled:</div>
+                                                        {overlappingEvents.map((event, idx) => (
+                                                            <div key={idx} className="tooltip-event">
+                                                                <span
+                                                                    className="tooltip-badge"
+                                                                    style={{backgroundColor: event.calendarColor || '#999'}}
+                                                                >
+                                                                    {event.calendarName}
+                                                                </span>
+                                                                {event.title}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                <div className={`event-indicator ${primaryEvent.hasConflict ? 'conflict-indicator-line' : ''}`}></div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
                                     <div
-                                        key={event.id || eventIndex}
-                                        className={`event-item ${event.hasConflict ? 'conflict-event' : ''}`}
+                                        className="free-time-slot"
+                                        onClick={(e) => {
+                                            const timeSlot = slot.time12;
+                                            const dateString = format(date, 'yyyy-MM-dd');
+                                            const message = `sam at ${timeSlot} on ${dateString}`;
+
+                                            // Copy to clipboard
+                                            navigator.clipboard.writeText(message).then(() => {
+                                                // Visual feedback on the clicked element
+                                                const button = e.currentTarget;
+                                                const textElement = button.querySelector('.free-time-text');
+                                                const originalText = textElement.textContent;
+
+                                                textElement.textContent = '✅ Copied!';
+                                                button.style.backgroundColor = '#e8f5e9';
+
+                                                setTimeout(() => {
+                                                    textElement.textContent = originalText;
+                                                    button.style.backgroundColor = '';
+                                                }, 2000);
+
+                                                // Simple notification at top
+                                                const notification = document.createElement('div');
+                                                notification.className = 'copy-notification';
+                                                notification.textContent = 'Time slot copied! Paste in Telegram chat.';
+                                                document.body.appendChild(notification);
+
+                                                // Remove notification after animation
+                                                setTimeout(() => {
+                                                    notification.remove();
+                                                }, 3000);
+                                            }).catch(() => {
+                                                // Fallback if clipboard fails
+                                                alert(`Copy this message:\n\n${message}`);
+                                            });
+                                        }}
+                                        style={{cursor: 'pointer'}}
                                     >
-                                        <div className="event-time">
-                                            {event.hasConflict && <span className="conflict-indicator-icon">⚡</span>}
-                                            {format(new Date(event.start), 'h:mm a')} - {format(new Date(event.end), 'h:mm a')}
-                                        </div>
-                                        <div className="event-title">
-                                            {event.title}
-                                            {event.hasConflict && (
-                                                <span className="conflict-text">SCHEDULING CONFLICT</span>
-                                            )}
-                                        </div>
-                                        {event.description && (
-                                            <div className="event-description">{event.description}</div>
-                                        )}
-                                        <div className={`event-indicator ${event.hasConflict ? 'conflict-indicator-line' : ''}`}></div>
+                                        <span className="free-time-text">🕊️ Free time - Click to select</span>
                                     </div>
-                                ))
-                            ) : (
-                                <div
-                                    className="free-time-slot"
-                                    onClick={(e) => {
-                                        const timeSlot = slot.time12;
-                                        const dateString = format(date, 'yyyy-MM-dd');
-                                        const message = `sam at ${timeSlot} on ${dateString}`;
-
-                                        // Copy to clipboard
-                                        navigator.clipboard.writeText(message).then(() => {
-                                            // Visual feedback on the clicked element
-                                            const button = e.currentTarget;
-                                            const textElement = button.querySelector('.free-time-text');
-                                            const originalText = textElement.textContent;
-
-                                            textElement.textContent = '✅ Copied!';
-                                            button.style.backgroundColor = '#e8f5e9';
-
-                                            setTimeout(() => {
-                                                textElement.textContent = originalText;
-                                                button.style.backgroundColor = '';
-                                            }, 2000);
-
-                                            // Simple notification at top
-                                            const notification = document.createElement('div');
-                                            notification.className = 'copy-notification';
-                                            notification.textContent = 'Time slot copied! Paste in Telegram chat.';
-                                            document.body.appendChild(notification);
-
-                                            // Remove notification after animation
-                                            setTimeout(() => {
-                                                notification.remove();
-                                            }, 3000);
-                                        }).catch(() => {
-                                            // Fallback if clipboard fails
-                                            alert(`Copy this message:\n\n${message}`);
-                                        });
-                                    }}
-                                    style={{cursor: 'pointer'}}
-                                >
-                                    <span className="free-time-text">🕊️ Free time - Click to select</span>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

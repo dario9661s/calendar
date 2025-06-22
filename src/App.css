@@ -438,7 +438,210 @@ body {
   min-width: 0; /* Important for flex containers */
   overflow: hidden; /* Prevent overflow */
 }
+/* Additional CSS for Multiple Calendar Support */
+/* Add this to your existing CSS file */
 
+/* Calendar badge styling */
+.calendar-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Event header with badges */
+.event-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Overlap pills container */
+.overlap-pills {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+/* Mini pill indicators */
+.mini-pill {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: help;
+  transition: transform 0.2s ease;
+}
+
+.mini-pill:hover {
+  transform: scale(1.1);
+}
+
+/* Event item with calendar color border */
+.event-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.event-item:hover .overlap-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Overlap tooltip */
+.overlap-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.tooltip-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.tooltip-event {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.tooltip-event:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  margin-right: 8px;
+  text-transform: uppercase;
+}
+
+/* Adjust existing event styles */
+.event-item.conflict-event {
+  background-color: #fff3e0;
+}
+
+.event-item.conflict-event .event-header {
+  position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .calendar-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .mini-pill {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .overlap-pills {
+    gap: 2px;
+  }
+
+  .overlap-tooltip {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .event-item:hover .overlap-tooltip {
+    transform: translateY(-50%);
+  }
+}
+
+/* Animation for calendar badge appearance */
+@keyframes badgeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.calendar-badge {
+  animation: badgeFadeIn 0.3s ease;
+}
+
+/* Style for multiple event stacking in same time slot */
+.slot-content {
+  position: relative;
+}
+
+.slot-content .event-item + .event-item {
+  margin-top: 8px;
+}
+
+/* Visual hierarchy for overlapping events */
+.event-item:has(.overlap-pills) {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Calendar color legend (optional - if you want to add a legend) */
+.calendar-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
 .slot-content {
   flex: 1;
   min-height: 50px;

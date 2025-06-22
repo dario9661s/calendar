@@ -1,4 +1,4 @@
-// api/calendar-events.js - Complete backend API file
+// api/calendar-events.js - Updated to support multiple calendars
 const { google } = require('googleapis');
 
 const SERVICE_ACCOUNT_KEY = {
@@ -13,6 +13,22 @@ const SERVICE_ACCOUNT_KEY = {
     auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_CERT_URL,
     client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL,
     universe_domain: process.env.GOOGLE_UNIVERSE_DOMAIN
+};
+
+// Calendar configuration with names and colors
+const CALENDAR_CONFIG = {
+    'dario@shopibro.com': {
+        name: 'Work',
+        color: '#4285F4' // Google Blue
+    },
+    'c_9b56b3b5e068d8ab18e98a7c04c45909cd62b3c61f18f1121e06ad92d706059a@group.calendar.google.com': {
+        name: 'Team',
+        color: '#0B8043' // Green
+    },
+    'c_8adfd1036fbf497dc91f3a748ceea929051812612432f3380301fdc070309c59@group.calendar.google.com': {
+        name: 'Family',
+        color: '#D50000' // Red
+    }
 };
 
 export default async function handler(req, res) {
@@ -67,31 +83,58 @@ export default async function handler(req, res) {
             timeMax: timeMax.toISOString()
         });
 
-        // Fetch events
-        const response = await calendar.events.list({
-            calendarId: 'dario@shopibro.com',
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
-            singleEvents: true,
-            orderBy: 'startTime',
-            maxResults: date ? 50 : 250
-        });
+        // Fetch events from ALL calendars
+        const allEvents = [];
 
-        // Map events to our format
-        const events = response.data.items?.map(event => ({
-            id: event.id,
-            title: event.summary || 'No Title',
-            start: event.start.dateTime || event.start.date,
-            end: event.end.dateTime || event.end.date,
-            description: event.description || ''
-        })) || [];
+        for (const [calendarId, config] of Object.entries(CALENDAR_CONFIG)) {
+            try {
+                console.log(`📊 Fetching from ${config.name} calendar...`);
 
-        console.log(`✅ Found ${events.length} events`);
+                const response = await calendar.events.list({
+                    calendarId: calendarId,
+                    timeMin: timeMin.toISOString(),
+                    timeMax: timeMax.toISOString(),
+                    singleEvents: true,
+                    orderBy: 'startTime',
+                    maxResults: date ? 50 : 250
+                });
+
+                // Map events to our format with calendar info
+                const calendarEvents = response.data.items?.map(event => ({
+                    id: event.id,
+                    title: event.summary || 'No Title',
+                    start: event.start.dateTime || event.start.date,
+                    end: event.end.dateTime || event.end.date,
+                    description: event.description || '',
+                    // NEW: Add calendar information
+                    calendarId: calendarId,
+                    calendarName: config.name,
+                    calendarColor: config.color
+                })) || [];
+
+                console.log(`✅ Found ${calendarEvents.length} events in ${config.name} calendar`);
+                allEvents.push(...calendarEvents);
+
+            } catch (error) {
+                console.error(`❌ Error fetching ${config.name} calendar:`, error.message);
+                // Continue with other calendars even if one fails
+            }
+        }
+
+        // Sort all events by start time
+        allEvents.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+        console.log(`✅ Total events found across all calendars: ${allEvents.length}`);
 
         // Return response
         return res.status(200).json({
             success: true,
-            events: events
+            events: allEvents,
+            calendars: Object.entries(CALENDAR_CONFIG).map(([id, config]) => ({
+                id,
+                name: config.name,
+                color: config.color
+            }))
         });
 
     } catch (error) {
